@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
@@ -22,7 +23,8 @@ namespace AirGradientAPI.Migrations
                     Rco2 = table.Column<int>(type: "integer", nullable: false),
                     Pm02 = table.Column<int>(type: "integer", nullable: false),
                     Atmp = table.Column<float>(type: "real", nullable: false),
-                    Rhum = table.Column<int>(type: "integer", nullable: false)
+                    Rhum = table.Column<int>(type: "integer", nullable: false),
+                    timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {

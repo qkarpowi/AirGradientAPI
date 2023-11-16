@@ -26,7 +26,8 @@ public class SensorController : ControllerBase
             Rco2 = sensorData.Rco2,
             Pm02 = sensorData.Pm02,
             Atmp = sensorData.Atmp,
-            Rhum = sensorData.Rhum
+            Rhum = sensorData.Rhum,
+            timestamp = DateTime.Now
         });
         _context.SaveChanges();
 
