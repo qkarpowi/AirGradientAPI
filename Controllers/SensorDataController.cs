@@ -3,13 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using System.Data.Common;
 using AirGradientAPI.Models;
 using AirGradientAPI.Entities;
-using System.ComponentModel.DataAnnotations;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace AirGradientAPI.Controllers;
 
 [ApiController]
-[Route("api/v{version}/sensors")]
+[Route("api/v1/sensors")]
 [Produces("application/json")]
 [SwaggerTag("Sensor data collection endpoints for AirGradient devices")]
 public class SensorController : ControllerBase
@@ -28,7 +27,7 @@ public class SensorController : ControllerBase
         Summary = "Receive sensor data from AirGradient device",
         Description = "Accepts sensor measurements from an AirGradient device including WiFi signal strength, CO2 levels, PM2.5 particles, temperature, and humidity. The data is validated and stored in the database with a timestamp.",
         OperationId = "ReceiveSensorData",
-        Tags = new[] { "Sensor Data" })]
+        Tags = ["Sensor Data"])]
     [SwaggerResponse(200, "Sensor data received and stored successfully", typeof(object))]
     [SwaggerResponse(400, "Invalid input data or chipId validation failed", typeof(object))]
     [SwaggerResponse(500, "Internal server error occurred while processing the data", typeof(object))]
