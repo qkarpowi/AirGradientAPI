@@ -27,7 +27,7 @@ public class SensorController : ControllerBase
             Pm02 = sensorData.Pm02,
             Atmp = sensorData.Atmp,
             Rhum = sensorData.Rhum,
-            timestamp = DateTime.Now
+            timestamp = DateTime.UtcNow
         });
         _context.SaveChanges();
 
