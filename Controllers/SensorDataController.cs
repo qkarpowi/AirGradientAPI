@@ -9,8 +9,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace AirGradientAPI.Controllers;
 
 [ApiController]
-[ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/sensors")]
+[Route("api/v{version}/sensors")]
 [Produces("application/json")]
 [SwaggerTag("Sensor data collection endpoints for AirGradient devices")]
 public class SensorController : ControllerBase
