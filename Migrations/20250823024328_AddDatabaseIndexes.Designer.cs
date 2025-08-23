@@ -3,6 +3,7 @@ using System;
 using AirGradientAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AirGradientAPI.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250823024328_AddDatabaseIndexes")]
+    partial class AddDatabaseIndexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -47,19 +50,19 @@ namespace AirGradientAPI.Migrations
                     b.Property<int>("Rhum")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("Timestamp")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("Timestamp");
-
                     b.Property<int>("Wifi")
                         .HasColumnType("integer");
+
+                    b.Property<DateTime?>("timestamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("timestamp");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Rco2")
                         .HasDatabaseName("IX_SensorData_CO2");
 
-                    b.HasIndex("Timestamp")
+                    b.HasIndex("timestamp")
                         .HasDatabaseName("IX_SensorData_Timestamp");
 
                     b.ToTable("SensorData");
