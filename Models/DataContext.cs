@@ -24,8 +24,7 @@ public class DataContext : DbContext
                 .HasMaxLength(50);
 
             // Timestamp configuration
-            entity.Property(e => e.Timestamp)
-                .HasColumnName("timestamp");
+                .HasColumnName("Timestamp");
 
             // Performance indexes
             entity.HasIndex(e => e.Timestamp)
