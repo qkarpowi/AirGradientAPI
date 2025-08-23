@@ -9,5 +9,5 @@ public class SensorDatum
     public int Pm02 { get; set; }
     public float Atmp { get; set; }
     public int Rhum { get; set; }
-    public DateTime? timestamp { get; set; }
+    public DateTime? Timestamp { get; set; }
 }

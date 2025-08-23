@@ -9,9 +9,34 @@ builder.Services.AddDbContext<DataContext>(options =>
     options.UseNpgsql(connectionString));
 
 builder.Services.AddControllers();
+
+// Configure API Versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new Microsoft.AspNetCore.Mvc.ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ApiVersionReader = Microsoft.AspNetCore.Mvc.Versioning.ApiVersionReader.Combine(
+        new Microsoft.AspNetCore.Mvc.Versioning.UrlSegmentApiVersionReader()
+    );
+});
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "AirGradient API",
+        Version = "v1.0",
+        Description = "API for receiving and storing AirGradient sensor data including WiFi signal strength, CO2 levels, PM2.5 particles, temperature, and humidity measurements.",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "AirGradient API Support"
+        }
+    });
+    
+    c.EnableAnnotations();
+});
 
 var app = builder.Build();
 
