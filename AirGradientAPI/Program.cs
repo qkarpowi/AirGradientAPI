@@ -18,7 +18,7 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "AirGradient API",
-        Version = "v1.0",
+        Version = "v1",
         Description = "API for receiving and storing AirGradient sensor data including WiFi signal strength, CO2 levels, PM2.5 particles, temperature, and humidity measurements.",
         Contact = new Microsoft.OpenApi.Models.OpenApiContact
         {
