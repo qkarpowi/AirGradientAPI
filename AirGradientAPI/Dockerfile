@@ -2,9 +2,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 
 WORKDIR /source
+COPY *.csproj .
+RUN dotnet restore --disable-parallel
 COPY . .
-RUN dotnet restore AirGradientAPI.csproj --disable-parallel
-RUN dotnet publish AirGradientAPI.csproj -c release -o /app --no-restore
+RUN dotnet publish -c release -o /app --no-restore
 
 
 #Serve Stage
