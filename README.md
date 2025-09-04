@@ -17,7 +17,7 @@ A .NET 9 Web API service designed to collect and store air quality sensor data f
 - **API Documentation**: Interactive Swagger/OpenAPI documentation
 - **Unit Testing**: Comprehensive test coverage with xUnit
 - **CI/CD**: Automated build and deployment with GitHub Actions
-- **Logging**: Structured logging for monitoring and troubleshooting with Open telemetry
+- **Logging**: Structured logging for monitoring and troubleshooting with OpenTelemetry
 - **Database Indexing**: Optimized database performance for time-series data queries
 
 ## Supported Sensor Data
