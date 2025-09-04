@@ -55,7 +55,7 @@ jobs:
         set -euo pipefail
         
         # --- Inputs (trim & guard against stray whitespace) ---
-        PORTAINER_BASE="${{ vars.PORTAINER_URL%/ }}/api"
+        PORTAINER_BASE="${{ vars.PORTAINER_URL }}/api"
         ENDPOINT_ID="$(printf '%s' "${{ vars.PORTAINER_ENDPOINT_ID }}" | tr -d '\r\n' | xargs)"
         SERVICE_ID="$(printf '%s' "${{ vars.PORTAINER_SERVICE_ID }}" | tr -d '\r\n' | xargs)"
         IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
