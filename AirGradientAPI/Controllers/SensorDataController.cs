@@ -28,7 +28,7 @@ public class SensorController : ControllerBase
     [SwaggerOperation(
         Summary = "Receive sensor data from AirGradient device",
         Description = "Accepts sensor measurements from an AirGradient device including WiFi signal strength, CO2 levels, PM2.5 particles, temperature, and humidity. The data is validated and stored in the database with a timestamp.",
-        OperationId = "ReceiveSensorData",
+        OperationId = nameof(ReceiveSensorData),
         Tags = ["Sensor Data"])]
     [SwaggerResponse(200, "Sensor data received and stored successfully", typeof(object))]
     [SwaggerResponse(400, "Invalid input data or chipId validation failed", typeof(object))]
@@ -80,22 +80,26 @@ public class SensorController : ControllerBase
             dbActivity?.SetTag("sensor.chipId", chipId);
             
             // Add sensor data tags for monitoring
-            dbActivity?.SetTag("sensor.wifi", sensorData.Wifi);
-            dbActivity?.SetTag("sensor.rco2", sensorData.Rco2);
-            dbActivity?.SetTag("sensor.pm02", sensorData.Pm02);
-            dbActivity?.SetTag("sensor.atmp", sensorData.Atmp);
-            dbActivity?.SetTag("sensor.rhum", sensorData.Rhum);
-
-            await _context.SensorData.AddAsync(new SensorDatum
+            if (sensorData != null)
             {
-                ChipId = chipId,
-                Wifi = sensorData.Wifi,
-                Rco2 = sensorData.Rco2,
-                Pm02 = sensorData.Pm02,
-                Atmp = sensorData.Atmp,
-                Rhum = sensorData.Rhum,
-                Timestamp = DateTime.UtcNow
-            });
+                dbActivity?.SetTag("sensor.wifi", sensorData.Wifi);
+                dbActivity?.SetTag("sensor.rco2", sensorData.Rco2);
+                dbActivity?.SetTag("sensor.pm02", sensorData.Pm02);
+                dbActivity?.SetTag("sensor.atmp", sensorData.Atmp);
+                dbActivity?.SetTag("sensor.rhum", sensorData.Rhum);
+
+                await _context.SensorData.AddAsync(new SensorDatum
+                {
+                    ChipId = chipId,
+                    Wifi = sensorData.Wifi,
+                    Rco2 = sensorData.Rco2,
+                    Pm02 = sensorData.Pm02,
+                    Atmp = sensorData.Atmp,
+                    Rhum = sensorData.Rhum,
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+
             await _context.SaveChangesAsync();
 
             dbActivity?.SetTag("database.status", "success");
@@ -106,14 +110,14 @@ public class SensorController : ControllerBase
         catch (DbUpdateException ex)
         {
             activity?.SetStatus(ActivityStatusCode.Error, "Database update error");
-            activity?.SetTag("error.type", "DbUpdateException");
+            activity?.SetTag("error.type", nameof(DbUpdateException));
             _logger.LogError(ex, "Database update error while saving sensor data for chipId: {ChipId}", chipId);
             return StatusCode(500, new { Error = "Failed to save sensor data. Please try again later." });
         }
         catch (DbException ex)
         {
             activity?.SetStatus(ActivityStatusCode.Error, "Database connection error");
-            activity?.SetTag("error.type", "DbException");
+            activity?.SetTag("error.type", nameof(DbException));
             _logger.LogError(ex, "Database connection error while saving sensor data for chipId: {ChipId}", chipId);
             return StatusCode(500, new { Error = "Database connection error. Please try again later." });
         }
