@@ -22,7 +22,15 @@ jobs:
         
     - name: Run EF Migrations
       run: |
-        dotnet tool restore
+        whoami || true
+        echo "HOME=$HOME"
+        dotnet --info
+        echo "PATH=$PATH"
+        dotnet --list-sdks
+        dotnet --list-runtimes
+        dotnet tool list -g || true
+        dotnet tool list || true
+        command -v dotnet-ef || true
         dotnet ef database update --project AirGradientAPI --connection "${{ secrets.DATABASE_CONNECTION_STRING }}"
         
     - name: Extract metadata
