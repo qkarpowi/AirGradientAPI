@@ -2,10 +2,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 
 WORKDIR /source
-COPY *.csproj .
-RUN dotnet restore --disable-parallel
 COPY . .
-RUN dotnet publish -c release -o /app --no-restore
+RUN dotnet restore --disable-parallel
+RUN dotnet publish -c Release -o /app
 
 
 #Serve Stage
