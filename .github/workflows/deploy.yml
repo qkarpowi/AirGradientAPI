@@ -49,67 +49,78 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         
-    - name: Update Portainer container
+    - name: Update Portainer service (preserve env; start if scaled to 0)
       shell: bash
       run: |
         set -euo pipefail
         
-        PORTAINER_BASE="${{ vars.PORTAINER_URL }}/api"
-        ENDPOINT_ID="${{ vars.PORTAINER_ENDPOINT_ID }}"
-        SERVICE_ID="${{ vars.PORTAINER_SERVICE_ID }}"
+        # --- Inputs (trim & guard against stray whitespace) ---
+        PORTAINER_BASE="${{ vars.PORTAINER_URL%/ }}/api"
+        ENDPOINT_ID="$(printf '%s' "${{ vars.PORTAINER_ENDPOINT_ID }}" | tr -d '\r\n' | xargs)"
+        SERVICE_ID="$(printf '%s' "${{ vars.PORTAINER_SERVICE_ID }}" | tr -d '\r\n' | xargs)"
+        IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
         
-        # 1) Get Portainer JWT
+        # --- Auth (JWT) ---
         TOKEN=$(curl -sS -X POST "${PORTAINER_BASE}/auth" \
           -H "Content-Type: application/json" \
           -d "{\"Username\":\"${{ secrets.PORTAINER_USERNAME }}\",\"Password\":\"${{ secrets.PORTAINER_PASSWORD }}\"}" \
           | jq -r '.jwt')
-        
-        if [[ -z "${TOKEN}" || "${TOKEN}" == "null" ]]; then
-          echo "::error::Failed to obtain Portainer token"
-          exit 1
-        fi
+        [[ -n "${TOKEN}" && "${TOKEN}" != "null" ]] || { echo "::error::Failed to obtain Portainer token"; exit 1; }
         AUTH_HDR="Authorization: Bearer ${TOKEN}"
         
-        # 2) Read current service (to get Version.Index and Spec)
-        SVC_JSON=$(curl -sS -H "${AUTH_HDR}" \
-          "${PORTAINER_BASE}/endpoints/${ENDPOINT_ID}/docker/services/${SERVICE_ID}")
+        # --- Inspect service ---
+        URL_GET="${PORTAINER_BASE}/endpoints/${ENDPOINT_ID}/docker/services/${SERVICE_ID}"
+        SVC_JSON=$(curl -sSf -H "${AUTH_HDR}" "${URL_GET}")
         
         VERSION=$(jq -r '.Version.Index' <<<"${SVC_JSON}")
         SPEC=$(jq -c '.Spec' <<<"${SVC_JSON}")
+        [[ -n "${VERSION}" && "${VERSION}" != "null" ]] || { echo "::error::Could not read service Version.Index"; exit 1; }
         
-        if [[ -z "${VERSION}" || "${VERSION}" == "null" ]]; then
-          echo "::error::Could not read service Version.Index"
-          exit 1
-        fi
+        # --- Build updated Spec: upsert env (preserve others), set image, bump ForceUpdate, start if replicas==0 ---
+        UPDATED_SPEC=$(
+          jq -c \
+            --arg image "${IMAGE}" \
+            --arg cs "${{ secrets.DATABASE_CONNECTION_STRING }}" \
+            --arg aspnet "Production" \
+            --arg otel_ep "${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}" \
+            --arg otel_hdr "${{ secrets.OTLP_AUTH_TOKEN }}" \
+            '
+            # Convert ["K=V",...] to {K:V}
+            def env_to_obj: ( . // [] )
+              | map( split("=";2) | { (.[0]): (.[1] // "") } )
+              | add // {};
+            # Convert {K:V} back to ["K=V",...]
+            def obj_to_env: to_entries | map("\(.key)=\(.value)");
         
-        # 3) Build updated Spec safely with jq
-        UPDATED_SPEC=$(jq -c \
-          --arg image "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" \
-          --arg cs "${{ secrets.DATABASE_CONNECTION_STRING }}" \
-          --arg aspnet "Production" \
-          --arg otel_ep "${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}" \
-          --arg otel_hdr "${{ secrets.OTLP_AUTH_TOKEN }}" \
-          '
-          .TaskTemplate.ContainerSpec.Image = $image
-          | .TaskTemplate.ContainerSpec.Env =
-              ["CONNECTION_STRING=\($cs)",
-               "ASPNETCORE_ENVIRONMENT=\($aspnet)",
-               "OTEL_EXPORTER_OTLP_ENDPOINT=\($otel_ep)",
-               "OTEL_EXPORTER_OTLP_HEADERS=\($otel_hdr)"]
-          | .TaskTemplate.ForceUpdate = ((.TaskTemplate.ForceUpdate // 0) + 1)
-          ' <<<"${SPEC}")
+            . as $spec
+            | ($spec.TaskTemplate.ContainerSpec.Env | env_to_obj) as $old
+            | ($old + {
+                CONNECTION_STRING: $cs,
+                ASPNETCORE_ENVIRONMENT: $aspnet,
+                OTEL_EXPORTER_OTLP_ENDPOINT: $otel_ep,
+                OTEL_EXPORTER_OTLP_HEADERS: $otel_hdr
+              }) as $merged
+            | $spec
+            | .TaskTemplate.ContainerSpec.Image = $image
+            | .TaskTemplate.ContainerSpec.Env = ($merged | obj_to_env)
+            | .TaskTemplate.ForceUpdate = ((.TaskTemplate.ForceUpdate // 0) + 1)
+            | if .Mode.Replicated and (.Mode.Replicated.Replicas // 1 | tonumber) == 0
+                then .Mode.Replicated.Replicas = 1
+                else .
+              end
+            ' <<<"${SPEC}"
+        )
         
-        # 4) Update the service (POST + version query). registryAuthFrom=spec helps private pulls.
-        HTTP_CODE=$(curl -sS -w "%{http_code}" -o /tmp/update.out \
-          -X POST "${PORTAINER_BASE}/endpoints/${ENDPOINT_ID}/docker/services/${SERVICE_ID}/update?version=${VERSION}&registryAuthFrom=spec" \
-          -H "${AUTH_HDR}" \
-          -H "Content-Type: application/json" \
+        # --- Update service ---
+        URL_UPDATE="${PORTAINER_BASE}/endpoints/${ENDPOINT_ID}/docker/services/${SERVICE_ID}/update?version=${VERSION}&registryAuthFrom=spec"
+        CODE=$(curl -sS -w "%{http_code}" -o /tmp/update.out \
+          -X POST "${URL_UPDATE}" \
+          -H "${AUTH_HDR}" -H "Content-Type: application/json" \
           --data "${UPDATED_SPEC}")
         
-        if [[ "${HTTP_CODE}" != "200" ]]; then
-          echo "::error::Service update failed (HTTP ${HTTP_CODE})"
+        if [[ "${CODE}" != "200" ]]; then
+          echo "::error::Service update failed (HTTP ${CODE})"
           cat /tmp/update.out
           exit 1
         fi
-        
-        echo "✅ Container updated to use ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+        echo "✅ Updated ${IMAGE} (env preserved, ForceUpdate bumped)."
