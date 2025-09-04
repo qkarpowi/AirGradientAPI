@@ -398,6 +398,3 @@ local.settings.json
 
 # User secrets
 secrets.json
-
-# Configuration files with sensitive data
-appsettings.json
