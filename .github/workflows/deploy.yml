@@ -22,7 +22,6 @@ jobs:
         
     - name: Run EF Migrations
       run: |
-        dotnet tool install --global dotnet-ef --version 9.0.0
         dotnet ef database update --project AirGradientAPI --connection "${{ secrets.DATABASE_CONNECTION_STRING }}"
         
     - name: Extract metadata
