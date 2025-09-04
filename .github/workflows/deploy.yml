@@ -1,0 +1,74 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ master ]
+
+env:
+  REGISTRY: ${{ vars.DOCKER_REGISTRY }}
+  IMAGE_NAME: airgradientapi
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Run EF Migrations
+      run: |
+        dotnet tool install --global dotnet-ef --version 9.0.0
+        dotnet ef database update --project AirGradientAPI --connection "${{ secrets.DATABASE_CONNECTION_STRING }}"
+        
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./AirGradientAPI/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        
+    - name: Update Portainer container
+      run: |
+        # Get Portainer authentication token
+        TOKEN=$(curl -s -X POST "${{ vars.PORTAINER_URL }}/api/auth" \
+          -H "Content-Type: application/json" \
+          -d '{"Username":"${{ secrets.PORTAINER_USERNAME }}","Password":"${{ secrets.PORTAINER_PASSWORD }}"}' \
+          | jq -r '.jwt')
+        
+        # Update the service/stack to use the latest image
+        curl -X PUT "${{ vars.PORTAINER_URL }}/api/endpoints/${{ vars.PORTAINER_ENDPOINT_ID }}/docker/services/${{ vars.PORTAINER_SERVICE_ID }}" \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "TaskTemplate": {
+              "ContainerSpec": {
+                "Image": "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest",
+                "Env": [
+                  "CONNECTION_STRING=${{ secrets.DATABASE_CONNECTION_STRING }}",
+                  "ASPNETCORE_ENVIRONMENT=Production",
+                  "OTEL_EXPORTER_OTLP_ENDPOINT=${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}",
+                  "OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTLP_AUTH_TOKEN }}"
+                ]
+              },
+              "ForceUpdate": 1
+            }
+          }'
+          
+        echo "Container updated to use latest image"

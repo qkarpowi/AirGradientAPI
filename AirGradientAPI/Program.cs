@@ -1,12 +1,27 @@
-using Microsoft.EntityFrameworkCore;
+using AirGradientAPI;
 using AirGradientAPI.Models;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<DataContext>(options =>
-    options.UseNpgsql(connectionString));
+if (builder.Environment.IsDevelopment())
+{
+    // Use Aspire PostgreSQL in development
+    builder.AddNpgsqlDbContext<DataContext>("airgradientdb");
+}
+else
+{
+    // Use connection string from environment variables in production
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+        ?? Environment.GetEnvironmentVariable("CONNECTION_STRING")
+        ?? throw new InvalidOperationException("Connection string not found. Set CONNECTION_STRING environment variable or DefaultConnection in appsettings.");
+    
+    builder.Services.AddDbContext<DataContext>(options =>
+        options.UseNpgsql(connectionString));
+}
 
 builder.Services.AddControllers();
 
@@ -44,4 +59,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapDefaultEndpoints();
+
 app.Run();
+
+public partial class Program { }

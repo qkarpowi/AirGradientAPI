@@ -1,15 +1,23 @@
 # AirGradient API
 
-A .NET 9 Web API service designed to collect and store air quality sensor data from AirGradient DIY monitoring devices. This service provides a robust endpoint for receiving environmental measurements including CO2 levels, PM2.5 particles, temperature, humidity, and WiFi signal strength.
+[![Build and Test](https://github.com/qkarpowi/AirGradientAPI/actions/workflows/build.yml/badge.svg)](https://github.com/qkarpowi/AirGradientAPI/actions/workflows/build.yml)
+[![Deploy](https://github.com/qkarpowi/AirGradientAPI/actions/workflows/deploy.yml/badge.svg)](https://github.com/qkarpowi/AirGradientAPI/actions/workflows/deploy.yml)
+[![.NET](https://img.shields.io/badge/.NET-9.0-blue)](https://dotnet.microsoft.com/download/dotnet/9.0)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+A .NET 9 Web API service designed to collect and store air quality sensor data from AirGradient DIY monitoring devices. This service provides a robust endpoint for receiving environmental measurements including CO2 levels, PM2.5 particles, temperature, humidity, and WiFi signal strength. The solution includes a .NET Aspire project to quickly run and test.
 
 ## Features
 
 - **RESTful API**: Clean HTTP endpoint for sensor data ingestion
 - **Data Validation**: Comprehensive validation of sensor readings with appropriate ranges
 - **PostgreSQL Integration**: Reliable data persistence with Entity Framework Core
-- **Docker Support**: Containerized deployment for easy setup and scaling  
+- **.NET Aspire**: Modern cloud-native orchestration for development and deployment
+- **Docker Support**: Containerized deployment for easy setup
 - **API Documentation**: Interactive Swagger/OpenAPI documentation
-- **Logging**: Structured logging for monitoring and troubleshooting
+- **Unit Testing**: Comprehensive test coverage with xUnit
+- **CI/CD**: Automated build and deployment with GitHub Actions
+- **Logging**: Structured logging for monitoring and troubleshooting with Open telemetry
 - **Database Indexing**: Optimized database performance for time-series data queries
 
 ## Supported Sensor Data
@@ -29,10 +37,10 @@ The API accepts the following environmental measurements:
 ### Prerequisites
 
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [PostgreSQL 12+](https://www.postgresql.org/download/)
-- [Docker](https://www.docker.com/get-started) (optional)
+- [Docker](https://www.docker.com/get-started) (for Aspire orchestration)
+- [PostgreSQL 12+](https://www.postgresql.org/download/) (if running without Aspire)
 
-### Local Development
+### Local Development with Aspire
 
 1. **Clone the repository**
    ```bash
@@ -40,9 +48,16 @@ The API accepts the following environmental measurements:
    cd AirGradientAPI
    ```
 
-2. **Configure database connection**
+2. **Run with .NET Aspire (Recommended)**
+   ```bash
+   dotnet run --project AirGradientAPI.AppHost
+   ```
    
-   Update `appsettings.json` with your PostgreSQL connection string:
+   This will start the Aspire dashboard where you can monitor all services. The API will be automatically configured with a PostgreSQL container.
+
+3. **Manual setup (Alternative)**
+   
+   Configure database connection in `AirGradientAPI/appsettings.json`:
    ```json
    {
      "ConnectionStrings": {
@@ -51,17 +66,23 @@ The API accepts the following environmental measurements:
    }
    ```
 
-3. **Set up the database**
+   Set up the database:
    ```bash
-   dotnet ef database update
+   dotnet ef database update --project AirGradientAPI
    ```
 
-4. **Run the application**
+   Run the API directly:
    ```bash
-   dotnet run
+   dotnet run --project AirGradientAPI
    ```
 
-The API will be available at `https://localhost:5001` with Swagger documentation at `https://localhost:5001/swagger`.
+The API will be available at `https://localhost:8080` with Swagger documentation at `https://localhost:8080/swagger`.
+
+### Running Tests
+
+```bash
+dotnet test AirGradientAPI.Tests
+```
 
 ### Docker Deployment
 
@@ -198,27 +219,52 @@ The API logs all operations and errors. Monitor the application logs for:
 
 ### Project Structure
 
+The solution now uses .NET Aspire for orchestration and includes multiple projects:
+
 ```
 AirGradientAPI/
-├── Controllers/           # API controllers
-│   └── SensorDataController.cs
-├── Entities/             # Database entities
-│   └── SensorDatum.cs
-├── Models/               # Data models and DTOs
-│   ├── DataContext.cs
-│   └── SensorDataModel.cs
-├── Migrations/           # Entity Framework migrations
-├── Properties/           # Launch settings
-├── Dockerfile           # Docker configuration
-└── Program.cs           # Application entry point
+├── AirGradientAPI/                    # Main API project
+│   ├── Controllers/                   # API controllers
+│   │   └── SensorDataController.cs
+│   ├── Entities/                      # Database entities
+│   │   └── SensorDatum.cs
+│   ├── Models/                        # Data models and DTOs
+│   │   ├── DataContext.cs
+│   │   └── SensorDataModel.cs
+│   ├── Migrations/                    # Entity Framework migrations
+│   ├── Properties/                    # Launch settings
+│   ├── Extensions.cs                  # Service extensions
+│   ├── Dockerfile                     # Docker configuration
+│   ├── Program.cs                     # API application entry point
+│   └── appsettings.json              # API configuration
+├── AirGradientAPI.AppHost/           # Aspire orchestration host
+│   ├── Properties/                    # Launch settings
+│   ├── Program.cs                     # Aspire host entry point
+│   └── appsettings.json              # Aspire configuration
+├── AirGradientAPI.Tests/             # Unit and integration tests
+│   ├── Controller/                    # Controller tests
+│   │   └── SensorControllerTests.cs
+│   └── Models/                        # Model tests
+├── .github/workflows/                # GitHub Actions
+│   ├── build.yml                     # Build workflow
+│   └── deploy.yml                    # Deployment workflow
+└── AirGradientAPI.sln               # Solution file
 ```
 
 ### Adding New Features
 
-1. **Database changes**: Create migrations with `dotnet ef migrations add <name>`
-2. **API endpoints**: Add new controllers following the existing pattern
+1. **Database changes**: Create migrations with `dotnet ef migrations add <name> --project AirGradientAPI`
+2. **API endpoints**: Add new controllers following the existing pattern in `AirGradientAPI/Controllers`
 3. **Validation**: Use data annotations in model classes
-4. **Documentation**: Update Swagger attributes for new endpoints
+4. **Tests**: Add corresponding tests in `AirGradientAPI.Tests`
+5. **Documentation**: Update Swagger attributes for new endpoints
+
+### Development Workflow
+
+1. **Start Aspire orchestration**: `dotnet run --project AirGradientAPI.AppHost`
+2. **Make changes**: Edit files in the `AirGradientAPI` project
+3. **Run tests**: `dotnet test`
+4. **View logs**: Use the Aspire dashboard for real-time monitoring
 
 ## Contributing
 
